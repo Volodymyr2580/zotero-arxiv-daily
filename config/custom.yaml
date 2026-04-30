@@ -4,11 +4,18 @@ zotero:
   include_path: null # Or set a list of glob patterns, e.g. ["2026/survey/**","2026/reading-group/**"]
 
 email:
-  sender: ${oc.env:SENDER}
-  receiver: ${oc.env:RECEIVER}
+  # Deprecated in PaperFlow Agent: daily results are written to Zotero instead of sent by email.
+  sender: ${oc.env:SENDER,null}
+  receiver: ${oc.env:RECEIVER,null}
   smtp_server: smtp.qq.com
   smtp_port: 465
-  sender_password: ${oc.env:SENDER_PASSWORD}
+  sender_password: ${oc.env:SENDER_PASSWORD,null}
+
+zotero_writer:
+  collection_path: 00_Inbox/00_to_Read_list
+  dry_run: false
+  tags:
+    status: status/to_read
 
 llm:
   api:

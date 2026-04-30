@@ -29,13 +29,13 @@
 
 > Track new scientific researches of your interest by just forking (and staring) this repo!😊
 
-*Zotero-arXiv-Daily* finds arxiv papers that may attract you based on the context of your Zotero library, and then sends the result to your mailbox📮. It can be deployed as Github Action Workflow with **zero cost**, **no installation**, and **few configuration** of Github Action environment variables for daily **automatic** delivery.
+*Zotero-arXiv-Daily* finds arxiv papers that may attract you based on the context of your Zotero library, and then writes the recommended papers into your Zotero `00_Inbox/00_to_Read_list` collection. It can be deployed as Github Action Workflow with **zero cost**, **no installation**, and **few configuration** of Github Action environment variables for daily **automatic** delivery.
 
 ## ✨ Features
 - Totally free! All the calculation can be done in the Github Action runner locally within its quota (for public repo).
 - AI-generated TL;DR for you to quickly pick up target papers.
 - Affiliations of the paper are resolved and presented.
-- Links of PDF and code implementation (if any) presented in the e-mail.
+- Links of PDF and code implementation (if any) stored in the Zotero item metadata.
 - List of papers sorted by relevance with your recent research interest.
 - Fast deployment via fork this repo and set environment variables in the Github Action Page.
 - Support LLM API for generating TL;DR of papers.
@@ -61,10 +61,7 @@ Below are all the secrets you need to set. They are invisible to anyone includin
 | Key |Description | Example |
 | :---  | :---  | :--- |
 | ZOTERO_ID  | User ID of your Zotero account. **User ID is not your username, but a sequence of numbers**Get your ID from [here](https://www.zotero.org/settings/security). You can find it at the position shown in this [screenshot](https://github.com/TideDra/zotero-arxiv-daily/blob/main/assets/userid.png). | 12345678  |
-| ZOTERO_KEY | An Zotero API key with read access. Get a key from [here](https://www.zotero.org/settings/security).  | AB5tZ877P2j7Sm2Mragq041H   |
-| SENDER | The email account of the SMTP server that sends you email. | abc@qq.com |
-| SENDER_PASSWORD | The password of the sender account. Note that it's not necessarily the password for logging in the e-mail client, but the authentication code for SMTP service. Ask your email provider for this.   | abcdefghijklmn |
-| RECEIVER | The e-mail address that receives the paper list. | abc@outlook.com |
+| ZOTERO_KEY | A Zotero API key with write access. Get a key from [here](https://www.zotero.org/settings/security). Read-only keys cannot create items. | AB5tZ877P2j7Sm2Mragq041H   |
 | OPENAI_API_KEY | API Key when using the API to access LLMs. You can get FREE API for using advanced open source LLMs in [SiliconFlow](https://cloud.siliconflow.cn/i/b3XhBRAm). | sk-xxx |
 | OPENAI_API_BASE | API URL when using the API to access LLMs. | https://api.siliconflow.cn/v1 |
 
@@ -78,12 +75,11 @@ zotero:
   api_key: ${oc.env:ZOTERO_KEY}
   include_path: null # Or e.g. ["2026/survey/**", "2026/reading-group/**"]
 
-email:
-  sender: ${oc.env:SENDER}
-  receiver: ${oc.env:RECEIVER}
-  smtp_server: smtp.qq.com
-  smtp_port: 465
-  sender_password: ${oc.env:SENDER_PASSWORD}
+zotero_writer:
+  collection_path: 00_Inbox/00_to_Read_list
+  dry_run: false
+  tags:
+    status: status/to_read
 
 llm:
   api:
@@ -109,7 +105,7 @@ Here is the full configuration, `???` means the value must be filled in:
 ```yaml
 zotero:
   user_id: ??? # User ID of your Zotero account.
-  api_key: ??? # An Zotero API key with read access.
+  api_key: ??? # A Zotero API key with write access.
   include_path: null # A list of glob patterns marking the Zotero collections that should be included. Example: ["2026/survey/**", "2026/reading-group/**"]
 
 source:
@@ -121,12 +117,11 @@ source:
   medrxiv:
     category: null # The categories of target medrxiv papers. Find categories from [here](https://www.medrxiv.org/) Example: ["psychiatry and clinical psychology", "neurology"]
 
-email:
-  sender: ??? # The email account of the SMTP server that sends you email. Example: abc@qq.com
-  receiver: ??? # The email account that receives the paper list. Example: abc@outlook.com
-  smtp_server: ??? # The SMTP server that sends the email. Ask your email provider (Gmail, QQ, Outlook, ...) for its SMTP server. Example: smtp.qq.com
-  smtp_port: ??? # The port of SMTP server. Example: 465
-  sender_password: ??? # The password of the sender account. Note that it's not necessarily the password for logging in the e-mail client, but the authentication code for SMTP service. Ask your email provider for this. Example: abcdefghijklmn
+zotero_writer:
+  collection_path: 00_Inbox/00_to_Read_list # Existing Zotero collection path where recommended papers are created.
+  dry_run: false # Set true to preview items without creating them in Zotero.
+  tags:
+    status: status/to_read
 
 llm:
   api:
@@ -153,8 +148,8 @@ reranker:
 
 executor:
   debug: false # Whether to use debug mode. Example: true
-  send_empty: false # Whether to send an empty email even if no new papers today. Example: true
-  max_paper_num: 100 # The maximum number of the papers presented in the email. Example: 100
+  send_empty: false # Deprecated for PaperFlow Agent Zotero output.
+  max_paper_num: 100 # The maximum number of papers written to Zotero. Example: 100
   source: ??? # The sources of papers to retrieve. Example: ['arxiv','biorxiv','medrxiv']
   reranker: local # The reranker to use. Example: 'local' or 'api'
 ```
@@ -163,9 +158,9 @@ That's all! Now you can test the workflow by manually triggering it:
 ![test](./assets/test.png)
 
 > [!NOTE]
-> The Test-Workflow Action is the debug version of the main workflow (Send-emails-daily), which always retrieve 5 arxiv papers regardless of the date. While the main workflow will be automatically triggered everyday and retrieve new papers released yesterday. There is no new arxiv paper at weekends and holiday, in which case you may see "No new papers found" in the log of main workflow.
+> The Test-Workflow Action is the debug version of the main workflow, which always retrieve 5 arxiv papers regardless of the date. While the main workflow will be automatically triggered everyday and retrieve new papers released yesterday. There is no new arxiv paper at weekends and holiday, in which case you may see "No new papers found" in the log of main workflow.
 
-Then check the log and the receiver email after it finishes.
+Then check the log and your Zotero `00_Inbox/00_to_Read_list` collection after it finishes.
 
 By default, the main workflow runs on 22:00 UTC everyday. You can change this time by editting the workflow config `.github/workflows/main.yml`.
 

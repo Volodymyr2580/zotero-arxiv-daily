@@ -7,8 +7,7 @@ from .protocol import CorpusPaper
 import random
 from datetime import datetime
 from .reranker import get_reranker_cls
-from .construct_email import render_email
-from .utils import send_email
+from .zotero_writer import ZoteroInboxWriter
 from openai import OpenAI
 from tqdm import tqdm
 
@@ -39,9 +38,12 @@ class Executor:
         }
         self.reranker = get_reranker_cls(config.executor.reranker)(config)
         self.openai_client = OpenAI(api_key=config.llm.api.key, base_url=config.llm.api.base_url)
+        self.zotero_client = zotero.Zotero(self.config.zotero.user_id, 'user', self.config.zotero.api_key)
     def fetch_zotero_corpus(self) -> list[CorpusPaper]:
         logger.info("Fetching zotero corpus")
-        zot = zotero.Zotero(self.config.zotero.user_id, 'user', self.config.zotero.api_key)
+        if not hasattr(self, "zotero_client"):
+            self.zotero_client = zotero.Zotero(self.config.zotero.user_id, 'user', self.config.zotero.api_key)
+        zot = self.zotero_client
         collections = zot.everything(zot.collections())
         collections = {c['key']:c for c in collections}
         corpus = zot.everything(zot.items(itemType='conferencePaper || journalArticle || preprint'))
@@ -116,9 +118,9 @@ class Executor:
                 p.generate_tldr(self.openai_client, self.config.llm)
                 p.generate_affiliations(self.openai_client, self.config.llm)
         elif not self.config.executor.send_empty:
-            logger.info("No new papers found. No email will be sent.")
+            logger.info("No new papers found. No Zotero items will be created.")
             return
-        logger.info("Sending email...")
-        email_content = render_email(reranked_papers)
-        send_email(self.config, email_content)
-        logger.info("Email sent successfully")
+        logger.info("Writing papers to Zotero...")
+        writer = ZoteroInboxWriter(self.config, self.zotero_client)
+        writer.write_papers(reranked_papers)
+        logger.info("Zotero writing finished successfully")

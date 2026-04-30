@@ -69,6 +69,14 @@ def make_stub_openai_client():
 
 _DEFAULT_COLLECTIONS = [
     {
+        "key": "INBOX",
+        "data": {"name": "00_Inbox", "parentCollection": False},
+    },
+    {
+        "key": "TOREAD",
+        "data": {"name": "00_to_Read_list", "parentCollection": "INBOX"},
+    },
+    {
         "key": "COL1",
         "data": {"name": "survey", "parentCollection": False},
     },
@@ -98,7 +106,7 @@ _DEFAULT_ITEMS = [
 ]
 
 
-def make_stub_zotero_client(collections=None, items=None):
+def make_stub_zotero_client(collections=None, items=None, created_items=None):
     """Return a SimpleNamespace that quacks like pyzotero.zotero.Zotero.
 
     Supports the call patterns used by Executor.fetch_zotero_corpus():
@@ -107,6 +115,7 @@ def make_stub_zotero_client(collections=None, items=None):
     """
     cols = collections if collections is not None else _DEFAULT_COLLECTIONS
     itms = items if items is not None else _DEFAULT_ITEMS
+    created = created_items if created_items is not None else []
 
     def everything(generator):
         return generator
@@ -117,10 +126,37 @@ def make_stub_zotero_client(collections=None, items=None):
     def items_fn(**kwargs):
         return itms
 
+    def item_template(item_type):
+        return {
+            "itemType": item_type,
+            "title": "",
+            "creators": [],
+            "abstractNote": "",
+            "url": "",
+            "collections": [],
+            "tags": [],
+            "extra": "",
+        }
+
+    def check_items(items):
+        return items
+
+    def create_items(items):
+        created.extend(items)
+        return {
+            "success": {str(i): f"ITEM{i}" for i, _ in enumerate(items)},
+            "failed": {},
+            "unchanged": {},
+        }
+
     return SimpleNamespace(
         everything=everything,
         collections=collections_fn,
         items=items_fn,
+        item_template=item_template,
+        check_items=check_items,
+        create_items=create_items,
+        created_items=created,
     )
 
 
