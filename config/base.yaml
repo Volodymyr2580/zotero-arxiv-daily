@@ -24,6 +24,7 @@ email:
 zotero_writer:
   collection_path: 00_Inbox/00_to_Read_list # Existing Zotero collection path where recommended papers are created.
   dry_run: false # Set true to preview items without creating them in Zotero.
+  skip_existing: true # Skip papers that already exist in Zotero by arXiv ID, URL, DOI, or title.
   tags:
     status: status/to_read
 

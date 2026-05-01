@@ -14,19 +14,21 @@ email:
 zotero_writer:
   collection_path: 00_Inbox/00_to_Read_list
   dry_run: false
+  skip_existing: true
   tags:
     status: status/to_read
 
 llm:
   api:
-    key: ${oc.env:OPENAI_API_KEY}
-    base_url: ${oc.env:OPENAI_API_BASE}
+    key: ${oc.env:DEEPSEEK_API_KEY}
+    base_url: ${oc.env:DEEPSEEK_API_BASE}
   generation_kwargs:
-    model: gpt-4o-mini
+    model: deepseek-chat
 
 source:
   arxiv:
-    category: ["cs.AI","cs.CV","cs.LG","cs.CL"]
+    category: ["cs.AI","cs.CV","cs.LG","cs.CL","eess.IV","physics.geo-ph"]
+    include_cross_list: false
 
 executor:
   debug: ${oc.env:DEBUG,null}
